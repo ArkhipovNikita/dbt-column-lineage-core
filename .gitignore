@@ -1,0 +1,10 @@
+# python
+__pycache__/
+*.pytest_cache/
+
+# pycharm
+.idea/
+venv/
+
+# MacOS
+.DS_Store
