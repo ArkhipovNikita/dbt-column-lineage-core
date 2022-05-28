@@ -1,14 +1,19 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from core.parser.schemas.relation import Path
+from core.parser.schemas.base import FieldSearchMixin
+from core.parser.schemas.relation import Path, Relation
+
+A_Star = "*"
 
 
 @dataclass
 class FieldRef:
     path: Path
     name: str
+
+    # resolved
     source: Optional["Source"] = None
 
 
@@ -29,12 +34,19 @@ class Field:
 
         return self.depends_on[0].name
 
+    @cached_property
+    def is_a_star(self) -> bool:
+        return self.name == A_Star
+
 
 @dataclass
 class Source:
     # identifier must be always set
     path: Path
     alias: Optional[str] = None
+
+    # resolved
+    reference: Union["CTE", Relation] = None
 
     def __post_init__(self):
         if self.path.identifier is None:
@@ -46,17 +58,16 @@ class Source:
 
 
 @dataclass
-class Statement:
+class Statement(FieldSearchMixin):
     fields: List[Field]
     sources: List[Source]
 
-    _field_names: set[str] = field(init=False)
-
-    def __post_init__(self):
-        self._field_names = set(field_.name for field_ in self.fields)
-
+    # TODO: search by index ?
     def has_field(self, name: str) -> bool:
-        return name in self._field_names
+        for field_ in self.fields:
+            if field_.name == name:
+                return True
+        return False
 
 
 @dataclass

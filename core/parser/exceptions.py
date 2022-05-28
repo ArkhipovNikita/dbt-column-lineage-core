@@ -4,3 +4,7 @@ class SourceNotFoundException(Exception):
 
 class RootNotFoundException(Exception):
     pass
+
+
+class SourceReferenceNotFoundException(Exception):
+    pass

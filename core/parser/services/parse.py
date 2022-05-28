@@ -1,19 +1,12 @@
 from typing import List, Tuple
 
 from pglast import parse_sql
-from pglast.ast import (
-    A_Star,
-    ColumnRef,
-    CommonTableExpr,
-    Node,
-    RangeVar,
-    ResTarget,
-    SelectStmt,
-)
+from pglast.ast import A_Star as A_StarNode
+from pglast.ast import ColumnRef, CommonTableExpr, Node, RangeVar, ResTarget, SelectStmt
 from pglast.visitors import Ancestor, Skip, Visitor
 
 from core.parser.exceptions import RootNotFoundException
-from core.parser.schemas.parsed import CTE, Field, FieldRef, Root, Source
+from core.parser.schemas.parsed import CTE, A_Star, Field, FieldRef, Root, Source
 from core.parser.schemas.relation import Path
 
 COLUMN_REF_COMPONENTS = ("database", "schema", "identifier", "name")
@@ -33,7 +26,7 @@ class FieldRefVisitor(Visitor):
         field = components.pop("name")
 
         components = {k: v.val for k, v in components.items()}
-        field = field.val if not isinstance(field, A_Star) else "*"
+        field = field.val if not isinstance(field, A_StarNode) else A_Star
 
         target_ref = FieldRef(
             path=Path(**components),
