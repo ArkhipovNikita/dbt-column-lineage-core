@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 from core.parser.schemas.base import FieldSearchMixin
 from core.parser.schemas.relation import Path, Relation
@@ -58,7 +58,7 @@ class Source:
 @dataclass
 class Statement(FieldSearchMixin):
     fields: List[Field]
-    sources: Tuple[Source]
+    sources: List[Source]
 
     # TODO: search by index ?
     def has_field(self, name: str) -> bool:
