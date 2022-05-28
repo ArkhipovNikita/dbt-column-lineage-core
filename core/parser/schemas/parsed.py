@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Tuple, Union
 
 from core.parser.schemas.base import FieldSearchMixin
 from core.parser.schemas.relation import Path, Relation
 
-A_Star = '*'
+A_Star = "*"
 
 
 @dataclass
@@ -44,7 +44,7 @@ class Source:
     path: Path
     alias: Optional[str] = None
 
-    reference: Union['CTE', Relation] = None
+    reference: Union["CTE", Relation] = None
 
     def __post_init__(self):
         if self.path.identifier is None:

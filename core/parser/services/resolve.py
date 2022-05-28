@@ -1,9 +1,12 @@
 from operator import attrgetter
-from typing import Dict, List, Iterable, Union, Mapping
+from typing import Dict, Iterable, List, Mapping, Union
 
 import networkx as nx
 
-from core.parser.exceptions import SourceNotFoundException, SourceReferenceNotFoundException
+from core.parser.exceptions import (
+    SourceNotFoundException,
+    SourceReferenceNotFoundException,
+)
 from core.parser.schemas.parsed import CTE, Field, FieldRef, Root, Source, Statement
 from core.parser.schemas.relation import Path, Relation, empty_path
 
@@ -20,8 +23,7 @@ class Resolver:
 
         self.cte_map: Dict[str, CTE] = {cte.name: cte for cte in ctes}
         self.initial_relations_map: Dict[Path, Relation] = {
-            relation.path: relation
-            for relation in initial_relations
+            relation.path: relation for relation in initial_relations
         }
 
         self.resolve_sources()
@@ -45,14 +47,14 @@ class Resolver:
         raise SourceReferenceNotFoundException()
 
     def sort_statements(self):
-        root_name = ''
+        root_name = ""
         statements_map = {root_name: self.root, **self.cte_map}
 
         # build dag
         dag = nx.DiGraph()
 
         for statement in self.statements:
-            references = map(attrgetter('reference'), statement.sources)
+            references = map(attrgetter("reference"), statement.sources)
             references = filter(
                 lambda reference: isinstance(reference, CTE),
                 references,
@@ -104,7 +106,7 @@ class Resolver:
             field_names = (
                 source.reference.field_names
                 if isinstance(source.reference, Relation)
-                else map(attrgetter('name'), source.reference.fields)
+                else map(attrgetter("name"), source.reference.fields)
             )
             fields.extend(
                 [
