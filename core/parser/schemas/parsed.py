@@ -13,6 +13,7 @@ class FieldRef:
     path: Path
     name: str
 
+    # resolved
     source: Optional["Source"] = None
 
 
@@ -44,6 +45,7 @@ class Source:
     path: Path
     alias: Optional[str] = None
 
+    # resolved
     reference: Union["CTE", Relation] = None
 
     def __post_init__(self):
