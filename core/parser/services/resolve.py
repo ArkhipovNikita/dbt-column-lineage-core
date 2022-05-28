@@ -1,3 +1,4 @@
+from dataclasses import replace
 from operator import attrgetter
 from typing import Dict, Iterable, List, Mapping, Union
 
@@ -8,7 +9,7 @@ from core.parser.exceptions import (
     SourceReferenceNotFoundException,
 )
 from core.parser.schemas.parsed import CTE, Field, FieldRef, Root, Source, Statement
-from core.parser.schemas.relation import Path, Relation, empty_path
+from core.parser.schemas.relation import Path, Relation
 
 
 class Resolver:
@@ -110,7 +111,15 @@ class Resolver:
             )
             fields.extend(
                 [
-                    Field(depends_on=[FieldRef(path=empty_path, name=field_name, source=source)])
+                    Field(
+                        depends_on=[
+                            FieldRef(
+                                path=replace(source.search_path),
+                                name=field_name,
+                                source=source,
+                            ),
+                        ],
+                    )
                     for field_name in field_names
                 ]
             )
