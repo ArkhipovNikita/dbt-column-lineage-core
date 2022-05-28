@@ -105,7 +105,7 @@ class CTEVisitor(Visitor):
             CTE(
                 name=node.ctename,
                 fields=fields,
-                sources=sources,
+                sources=tuple(sources),
             )
         )
 
@@ -133,7 +133,7 @@ class RootVisitor(Visitor):
 
         self.root = Root(
             fields=fields,
-            sources=sources,
+            sources=tuple(sources),
         )
 
         return Skip

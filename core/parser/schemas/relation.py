@@ -1,6 +1,8 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional
+from typing import Optional, Set
+
+from core.parser.schemas.base import FieldSearchMixin
 
 
 @dataclass(frozen=True)
@@ -10,6 +12,13 @@ class Path:
     identifier: Optional[str] = None
 
     def __post_init__(self):
+        self._check_intermediate_none()
+
+    @cached_property
+    def is_empty(self) -> bool:
+        return self == empty_path
+
+    def _check_intermediate_none(self):
         components = (
             self.identifier,
             self.schema,
@@ -24,23 +33,14 @@ class Path:
             elif is_none_set:
                 raise ValueError("There cannot be intermediate None value.")
 
-    @cached_property
-    def is_empty(self) -> bool:
-        return self == empty_path
 
-
-@dataclass
-class Relation:
+@dataclass(frozen=True)
+class Relation(FieldSearchMixin):
     path: Path
-    field_names: List[str]
-
-    _field_names: set[str] = field(init=False)
-
-    def __post_init__(self):
-        self._field_names = set(self.field_names)
+    field_names: Set[str]
 
     def has_field(self, name: str) -> bool:
-        return name in self._field_names
+        return name in self.field_names
 
 
 empty_path = Path()
