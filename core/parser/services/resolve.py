@@ -1,6 +1,6 @@
 from dataclasses import replace
 from operator import attrgetter
-from typing import Dict, Iterable, List, Mapping, Union
+from typing import Dict, Iterable, List, Union
 
 import networkx as nx
 
@@ -12,24 +12,22 @@ from core.parser.schemas.parsed import CTE, Field, FieldRef, Root, Source, State
 from core.parser.schemas.relation import Path, Relation
 
 
-class Resolver:
+class SourcesResolver:
     def __call__(
         self,
-        root: Root,
-        ctes: List[CTE],
-        initial_relations: List[Relation],
+        initial_relations: Iterable[Relation],
+        statements: Iterable[Statement],
     ):
-        self.root = root
-        self.statements: List[Statement] = [root, *ctes]
+        self.statements = statements
 
-        self.cte_map: Dict[str, CTE] = {cte.name: cte for cte in ctes}
+        self.cte_map: Dict[str, CTE] = {
+            statement.name: statement for statement in statements if isinstance(statement, CTE)
+        }
         self.initial_relations_map: Dict[Path, Relation] = {
             relation.path: relation for relation in initial_relations
         }
 
         self.resolve_sources()
-        self.sort_statements()
-        self.resolve_fields()
 
     def resolve_sources(self):
         for statement in self.statements:
@@ -47,10 +45,20 @@ class Resolver:
 
         raise SourceReferenceNotFoundException()
 
-    def sort_statements(self):
-        root_name = ""
-        statements_map = {root_name: self.root, **self.cte_map}
 
+class StatementsSorter:
+    def __call__(self, statements: Iterable[Statement]) -> Iterable[Statement]:
+        self.root_name = ""
+        self.statements = statements
+
+        self.statements_map: Dict[str, Union[Statement]] = {
+            statement.name if isinstance(statement, CTE) else self.root_name: statement
+            for statement in statements
+        }
+
+        return self.sort_statements()
+
+    def sort_statements(self) -> Iterable[Statement]:
         # build dag
         dag = nx.DiGraph()
 
@@ -64,45 +72,39 @@ class Resolver:
             for reference in references:
                 dag.add_edge(
                     reference.name,
-                    statement.name if isinstance(statement, CTE) else root_name,
+                    statement.name if isinstance(statement, CTE) else self.root_name,
                 )
 
         # get topological order
         nodes = nx.topological_sort(dag)
-        self.statements = [statements_map[node] for node in nodes]
+        return map(lambda node: self.statements_map[node], nodes)
 
-    def resolve_fields(self):
-        for statement in self.statements:
-            source_map = self.get_source_map(statement.sources)
-            a_star_fields = []
-            new_fields = []
 
-            for field in statement.fields:
-                if field.is_a_star:
-                    a_star_fields.append(field)
-                    new_fields.extend(self.get_a_star_fields(field, statement.sources, source_map))
-                    continue
+class FieldResolver:
+    def __call__(self, statement: Statement):
+        self.statement = statement
+        self.source_map: Dict[Path, Source] = {
+            source.search_path: source for source in statement.sources
+        }
 
-                for field_ref in field.depends_on:
-                    field_ref.source = self.get_field_ref_source(
-                        field_ref, statement.sources, source_map
-                    )
+        self.resolve_normal_fields()
+        self.resolve_a_star_fields()
 
-            statement.fields = [field for field in statement.fields if field not in a_star_fields]
-            statement.fields.extend(new_fields)
+    def resolve_a_star_fields(self):
+        fields = filter(attrgetter("is_a_star"), self.statement.fields)
 
-    def get_a_star_fields(
-        self,
-        field: Field,
-        sources: Iterable[Source],
-        source_map: Mapping[Path, Source],
-    ) -> List[Field]:
-        if field.depends_on[0].path.is_empty:
-            sources = sources
-        else:
-            sources = source_map[field.depends_on[0].path]
+        for field in fields:
+            self.statement.fields.remove(field)
+            self.statement.fields.extend(self.get_a_star_fields(field))
 
+    def get_a_star_fields(self, field: Field) -> List[Field]:
+        sources = (
+            self.statement.sources
+            if field.depends_on[0].path.is_empty
+            else self.source_map[field.depends_on[0].path]
+        )
         fields = []
+
         for source in sources:
             field_names = (
                 source.reference.field_names
@@ -126,23 +128,36 @@ class Resolver:
 
         return fields
 
-    def get_field_ref_source(
-        self,
-        field_ref: FieldRef,
-        sources: Iterable[Source],
-        source_map: Mapping[Path, Source],
-    ) -> Source:
-        if not field_ref.path.is_empty:
-            return source_map[field_ref.path]
+    def resolve_normal_fields(self):
+        fields = filter(lambda f: not f.is_a_star, self.statement.fields)
 
-        for source in sources:
+        for field in fields:
+            for field_ref in field.depends_on:
+                field_ref.source = self.get_field_ref_source(field_ref)
+
+    def get_field_ref_source(self, field_ref: FieldRef) -> Source:
+        if not field_ref.path.is_empty:
+            return self.source_map[field_ref.path]
+
+        for source in self.statement.sources:
             if source.reference.has_field(field_ref.name):
                 return source
 
         raise SourceNotFoundException()
 
-    def get_source_map(self, sources: Iterable[Source]) -> Dict[Path, Source]:
-        return {source.search_path: source for source in sources}
+
+class FieldsResolver:
+    def __init__(self):
+        self.field_resolver = FieldResolver()
+
+    def __call__(self, statements: Iterable[Statement]):
+        for statement in statements:
+            self.field_resolver(statement)
 
 
-resolve = Resolver()
+def resolve(root: Root, ctes: List[CTE], initial_relations: List[Relation]):
+    statements = [root, *ctes]
+
+    SourcesResolver()(initial_relations, statements)
+    statements = StatementsSorter()(statements)
+    FieldsResolver()(statements)
