@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Optional, Set
+from typing import Optional, Tuple
 
 from core.parser.schemas.base import FieldSearchMixin
 
@@ -37,7 +37,7 @@ class Path:
 @dataclass(frozen=True)
 class Relation(FieldSearchMixin):
     path: Path
-    field_names: Set[str]
+    field_names: Tuple[str, ...]
 
     def has_field(self, name: str) -> bool:
         return name in self.field_names
