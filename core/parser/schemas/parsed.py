@@ -62,12 +62,15 @@ class Statement(FieldSearchMixin):
     fields: List[Field]
     sources: List[Source]
 
-    # TODO: search by index ?
-    def has_field(self, name: str) -> bool:
+    # TODO: get by index ?
+    def get_field(self, name: str) -> Optional[Field]:
         for field_ in self.fields:
             if field_.name == name:
-                return True
-        return False
+                return field_
+        return None
+
+    def has_field(self, name: str) -> bool:
+        return bool(self.get_field(name))
 
 
 @dataclass
