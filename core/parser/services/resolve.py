@@ -155,7 +155,7 @@ class FieldsResolver:
             self.field_resolver(statement)
 
 
-def resolve(root: Root, ctes: List[CTE], initial_relations: List[Relation]):
+def resolve(root: Root, ctes: List[CTE], initial_relations: Iterable[Relation]):
     statements = [root, *ctes]
 
     SourcesResolver()(initial_relations, statements)
