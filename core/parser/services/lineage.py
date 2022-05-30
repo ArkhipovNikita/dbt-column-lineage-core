@@ -13,17 +13,22 @@ def get_column_lineage(field: Field) -> ColumnLineage:
         field = stack.pop()
 
         for field_ref in field.depends_on:
+            reference = field_ref.source.reference
 
             # finish
-            if isinstance(field_ref.source.reference, Relation):
+            if isinstance(reference, Relation):
                 res[field_ref.source.reference].append(field_ref.name)
                 continue
 
             # get field by name
-            for field_ in field_ref.source.reference.fields:
-                if field_ref.name == field_.name:
-                    stack.append(field_)
-                    break
+            field_ = reference.get_field(field_ref.name)
+
+            if not field_:
+                raise ValueError(
+                    "Reference {} doesn't have field {}".format(reference, field_ref.name)
+                )
+
+            stack.append(field_)
 
     return res
 
