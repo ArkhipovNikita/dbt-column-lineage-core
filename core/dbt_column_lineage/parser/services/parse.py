@@ -9,13 +9,11 @@ from dbt_column_lineage.parser.schemas.parsed import (
     Root,
     Source,
 )
-from dbt_column_lineage.parser.schemas.relation import Path
+from dbt_column_lineage.parser.schemas.relation import ComponentName, Path
 from pglast import parse_sql
 from pglast.ast import A_Star as A_StarNode
 from pglast.ast import ColumnRef, CommonTableExpr, Node, RangeVar, ResTarget, SelectStmt
 from pglast.visitors import Ancestor, Skip, Visitor
-
-COLUMN_REF_COMPONENTS = ("database", "schema", "identifier", "name")
 
 
 class FieldRefVisitor(Visitor):
@@ -25,17 +23,23 @@ class FieldRefVisitor(Visitor):
         return self.field_refs
 
     def visit_ColumnRef(self, ancestors: Ancestor, node: ColumnRef):
-        if len(node.fields) > len(COLUMN_REF_COMPONENTS):
+        component_names = ComponentName.values()
+
+        if len(node.fields) > len(component_names):
             raise ValueError("Too many values in column reference.")
 
-        components = dict(zip(COLUMN_REF_COMPONENTS[-len(node.fields) :], node.fields))
-        field = components.pop("name")
+        component_names = ComponentName.values()
+        args = node.fields[: len(component_names)]
+        path = Path.from_args(args)
 
-        components = {k: v.val for k, v in components.items()}
-        field = field.val if not isinstance(field, A_StarNode) else A_Star
+        field = (
+            node.fields[len(component_names)] if len(node.fields) > len(component_names) else None
+        )
+        # FIXME: when field is None then val
+        field = A_Star if isinstance(field, A_StarNode) else field.val
 
         target_ref = FieldRef(
-            path=Path(**components),
+            path=path,
             name=field,
         )
 
