@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import List, Optional, Union
 
-from core.parser.schemas.base import FieldSearchMixin
-from core.parser.schemas.relation import Path, Relation
+from dbt_column_lineage.parser.schemas.base import FieldSearchMixin
+from dbt_column_lineage.parser.schemas.relation import Path, Relation
 
 A_Star = "*"
 

@@ -1,15 +1,20 @@
+from operator import attrgetter
 from typing import List, Tuple
 
+from dbt_column_lineage.parser.exceptions import RootNotFoundException
+from dbt_column_lineage.parser.schemas.parsed import (
+    CTE,
+    A_Star,
+    Field,
+    FieldRef,
+    Root,
+    Source,
+)
+from dbt_column_lineage.parser.schemas.relation import ComponentName, Path
 from pglast import parse_sql
 from pglast.ast import A_Star as A_StarNode
 from pglast.ast import ColumnRef, CommonTableExpr, Node, RangeVar, ResTarget, SelectStmt
 from pglast.visitors import Ancestor, Skip, Visitor
-
-from core.parser.exceptions import RootNotFoundException
-from core.parser.schemas.parsed import CTE, A_Star, Field, FieldRef, Root, Source
-from core.parser.schemas.relation import Path
-
-COLUMN_REF_COMPONENTS = ("database", "schema", "identifier", "name")
 
 
 class FieldRefVisitor(Visitor):
@@ -19,17 +24,20 @@ class FieldRefVisitor(Visitor):
         return self.field_refs
 
     def visit_ColumnRef(self, ancestors: Ancestor, node: ColumnRef):
-        if len(node.fields) > len(COLUMN_REF_COMPONENTS):
+        component_names = ComponentName.values()
+
+        if len(node.fields) > len(component_names):
             raise ValueError("Too many values in column reference.")
 
-        components = dict(zip(COLUMN_REF_COMPONENTS[-len(node.fields) :], node.fields))
-        field = components.pop("name")
+        field = node.fields[-1]
+        field = A_Star if isinstance(field, A_StarNode) else field.val
 
-        components = {k: v.val for k, v in components.items()}
-        field = field.val if not isinstance(field, A_StarNode) else A_Star
+        args = node.fields[:-1]
+        args = list(map(attrgetter("val"), args))
+        path = Path.from_args(args)
 
         target_ref = FieldRef(
-            path=Path(**components),
+            path=path,
             name=field,
         )
 

@@ -8,6 +8,8 @@ authors = ["Arkhipov Nikita"]
 python = "^3.10"
 pglast = "^3.10"
 networkx = "^2.8.2"
+dbt-postgres = "^1.1.0"
+argparse = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 # linting

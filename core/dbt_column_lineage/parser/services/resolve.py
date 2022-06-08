@@ -3,13 +3,19 @@ from operator import attrgetter
 from typing import Dict, Iterable, List, Union
 
 import networkx as nx
-
-from core.parser.exceptions import (
+from dbt_column_lineage.parser.exceptions import (
     SourceNotFoundException,
     SourceReferenceNotFoundException,
 )
-from core.parser.schemas.parsed import CTE, Field, FieldRef, Root, Source, Statement
-from core.parser.schemas.relation import Path, Relation
+from dbt_column_lineage.parser.schemas.parsed import (
+    CTE,
+    Field,
+    FieldRef,
+    Root,
+    Source,
+    Statement,
+)
+from dbt_column_lineage.parser.schemas.relation import Path, Relation
 
 
 class SourcesResolver:
