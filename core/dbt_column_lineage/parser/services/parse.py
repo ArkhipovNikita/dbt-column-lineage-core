@@ -1,13 +1,19 @@
 from typing import List, Tuple
 
+from dbt_column_lineage.parser.exceptions import RootNotFoundException
+from dbt_column_lineage.parser.schemas.parsed import (
+    CTE,
+    A_Star,
+    Field,
+    FieldRef,
+    Root,
+    Source,
+)
+from dbt_column_lineage.parser.schemas.relation import Path
 from pglast import parse_sql
 from pglast.ast import A_Star as A_StarNode
 from pglast.ast import ColumnRef, CommonTableExpr, Node, RangeVar, ResTarget, SelectStmt
 from pglast.visitors import Ancestor, Skip, Visitor
-
-from core.parser.exceptions import RootNotFoundException
-from core.parser.schemas.parsed import CTE, A_Star, Field, FieldRef, Root, Source
-from core.parser.schemas.relation import Path
 
 COLUMN_REF_COMPONENTS = ("database", "schema", "identifier", "name")
 

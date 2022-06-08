@@ -1,8 +1,8 @@
 from collections import defaultdict
 
-from core.parser.schemas.lineage import ColumnLineage, ColumnsLineage
-from core.parser.schemas.parsed import Field, Root
-from core.parser.schemas.relation import Relation
+from dbt_column_lineage.parser.schemas.lineage import ColumnLineage, ColumnsLineage
+from dbt_column_lineage.parser.schemas.parsed import Field, Root
+from dbt_column_lineage.parser.schemas.relation import Relation
 
 
 def get_column_lineage(field: Field) -> ColumnLineage:

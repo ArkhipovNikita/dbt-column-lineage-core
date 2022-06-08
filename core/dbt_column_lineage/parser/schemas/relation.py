@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Optional, Tuple
 
-from core.parser.schemas.base import FieldSearchMixin
+from dbt_column_lineage.parser.schemas.base import FieldSearchMixin
 
 
 @dataclass(frozen=True)
