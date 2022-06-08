@@ -1,0 +1,2 @@
+COLUMN_LINEAGE_MANIFEST_FILENAME = "manifest.json"
+COLUMN_LINEAGE_DIRNAME = "column_lineage"
