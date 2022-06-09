@@ -40,16 +40,17 @@ class Path:
     def is_empty(self) -> bool:
         return self == empty_path
 
+    def get_part(self, key: ComponentName) -> Optional[str]:
+        return getattr(self, key.value, None)
+
     def _check_intermediate_none(self):
-        components = (
-            self.identifier,
-            self.schema,
-            self.database,
-        )
+        component_names = reversed(ComponentName)
 
         is_none_set = False
 
-        for component in components:
+        for component_name in component_names:
+            component = self.get_part(component_name)
+
             if component is None:
                 is_none_set = True
             elif is_none_set:
