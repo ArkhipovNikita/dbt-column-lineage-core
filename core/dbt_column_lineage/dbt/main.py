@@ -143,7 +143,3 @@ def _add_common_arguments(*subparsers):
             settings in profiles.yml.
             """,
         )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
