@@ -26,13 +26,14 @@ class Path:
         self._check_intermediate_none()
 
     @classmethod
-    def from_args(cls, *args) -> "Path":
+    def from_args(cls, args) -> "Path":
         component_names = ComponentName.values()
 
         if len(args) > len(component_names):
             raise ValueError("Too many components to create path.")
 
         components = dict(zip(component_names[-len(args) :], args))
+
         return cls(**components)
 
     @cached_property

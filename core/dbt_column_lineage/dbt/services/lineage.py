@@ -75,4 +75,4 @@ def _get_dbt_path_from_vals(vals: List[str]) -> DBTPath:
 
 
 def _get_path_from_vals(vals: List[str]) -> Path:
-    return Path.from_args(*vals)
+    return Path.from_args(vals)

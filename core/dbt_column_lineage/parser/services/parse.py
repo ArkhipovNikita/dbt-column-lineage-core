@@ -1,3 +1,4 @@
+from operator import attrgetter
 from typing import List, Tuple
 
 from dbt_column_lineage.parser.exceptions import RootNotFoundException
@@ -28,15 +29,12 @@ class FieldRefVisitor(Visitor):
         if len(node.fields) > len(component_names):
             raise ValueError("Too many values in column reference.")
 
-        component_names = ComponentName.values()
-        args = node.fields[: len(component_names)]
-        path = Path.from_args(args)
-
-        field = (
-            node.fields[len(component_names)] if len(node.fields) > len(component_names) else None
-        )
-        # FIXME: when field is None then val
+        field = node.fields[-1]
         field = A_Star if isinstance(field, A_StarNode) else field.val
+
+        args = node.fields[:-1]
+        args = list(map(attrgetter("val"), args))
+        path = Path.from_args(args)
 
         target_ref = FieldRef(
             path=path,
