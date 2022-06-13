@@ -1,6 +1,4 @@
 import re
-from dataclasses import dataclass
-from functools import cached_property
 from operator import attrgetter
 from typing import List, Tuple
 
@@ -10,11 +8,13 @@ from dbt_column_lineage.parser.schemas.parsed import (
     A_Star,
     Field,
     FieldRef,
+    NodeSQL,
     Root,
     Source,
     Statement,
 )
 from dbt_column_lineage.parser.schemas.relation import ComponentName, Path
+from dbt_column_lineage.parser.services._formula import get_formula
 from dbt_column_lineage.parser.visitors import (
     ColumnRefVisitor,
     CommonTableExprVisitor,
@@ -25,19 +25,6 @@ from dbt_column_lineage.parser.visitors import (
 from pglast import parse_sql
 from pglast.ast import A_Star as A_StarNode
 from pglast.ast import ColumnRef, CommonTableExpr, Node, ResTarget, SelectStmt
-
-
-@dataclass(frozen=True)
-class NodeSQL:
-    # must be lowered
-    sql: str
-    # global indexes
-    start_idx: int
-    end_idx: int
-
-    @cached_property
-    def area(self) -> str:
-        return self.sql[self.start_idx : self.end_idx]
 
 
 def get_field_ref(node: ColumnRef) -> FieldRef:
@@ -59,41 +46,7 @@ def get_field_ref(node: ColumnRef) -> FieldRef:
 def get_field(node: ResTarget, node_sql: NodeSQL) -> Field:
     column_refs = ColumnRefVisitor()(node)
     field_refs = list(map(get_field_ref, column_refs))
-
-    # TODO: node_sql for column ref
-    # strip alias, punctuation and space
-    formula = (
-        re.sub("\s+as[\s\S]+", "", node_sql.area, flags=re.IGNORECASE)
-        if node.name
-        else re.sub("(?:,)\s*$", "", node_sql.area)
-    )
-
-    parts = []
-    prev_idx = 0
-    for column_ref, field_ref in zip(column_refs, field_refs):
-        start_idx = column_ref.location - node_sql.start_idx
-
-        # todo: take from field_ref
-        components = list(
-            map(lambda c: c.val if not isinstance(c, A_StarNode) else "\*", column_ref.fields)
-        )
-        # todo: quote policy
-        quote_component = lambda s: '"{}"'.format(s)
-        component_pattern = lambda s: "(?:{}|{})".format(s, quote_component(s))
-        # todo: extract separator
-        pattern = ".".join(map(component_pattern, components))
-        m = re.match(pattern, formula[start_idx:])
-
-        if m is None:
-            print()
-
-        end_idx = m.end() + start_idx
-        parts.append(formula[prev_idx:start_idx])
-        prev_idx = end_idx
-    else:
-        parts.append(formula[prev_idx:])
-
-    formula = "%s".join(parts)
+    formula = get_formula(field_refs, column_refs, node_sql)
 
     return Field(alias=node.name, depends_on=field_refs, formula=formula)
 

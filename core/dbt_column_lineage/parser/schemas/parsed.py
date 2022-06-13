@@ -8,6 +8,19 @@ from dbt_column_lineage.parser.schemas.relation import Path, Relation
 A_Star = "*"
 
 
+@dataclass(frozen=True)
+class NodeSQL:
+    # must be lowered
+    sql: str
+    # global indexes
+    start_idx: int
+    end_idx: int
+
+    @cached_property
+    def area(self) -> str:
+        return self.sql[self.start_idx : self.end_idx]
+
+
 @dataclass
 class FieldRef:
     path: Path
