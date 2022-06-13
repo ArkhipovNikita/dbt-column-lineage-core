@@ -95,6 +95,7 @@ class FieldResolver:
 
         self.resolve_normal_fields()
         self.resolve_a_star_fields()
+        self.resolve_formulas()
 
     def resolve_a_star_fields(self):
         fields = filter(attrgetter("is_a_star"), self.statement.fields)
@@ -107,7 +108,7 @@ class FieldResolver:
         sources = (
             self.statement.sources
             if field.depends_on[0].path.is_empty
-            else self.source_map[field.depends_on[0].path]
+            else [self.source_map[field.depends_on[0].path]]
         )
         fields = []
 
@@ -127,6 +128,7 @@ class FieldResolver:
                                 source=source,
                             ),
                         ],
+                        formula="{}",
                     )
                     for field_name in field_names
                 ]
@@ -138,8 +140,22 @@ class FieldResolver:
         fields = filter(lambda f: not f.is_a_star, self.statement.fields)
 
         for field in fields:
+            formulas = []
+
             for field_ref in field.depends_on:
-                field_ref.source = self.get_field_ref_source(field_ref)
+                source = self.get_field_ref_source(field_ref)
+
+                field_ref.source = source
+                reference = source.reference
+
+                if isinstance(reference, Relation):
+                    formulas.append(field_ref.name)
+                    continue
+
+                field_ = reference.get_field(field_ref.name)
+                formulas.append(field_.formula)
+
+            field.formula = field.formula.format(*formulas)
 
     def get_field_ref_source(self, field_ref: FieldRef) -> Source:
         if not field_ref.path.is_empty:
@@ -150,6 +166,22 @@ class FieldResolver:
                 return source
 
         raise SourceNotFoundException()
+
+    def resolve_formulas(self):
+        for field in self.statement.fields:
+            formulas = []
+
+            for field_ref in field.depends_on:
+                reference = field_ref.source.reference
+
+                if isinstance(reference, Relation):
+                    formulas.append(field_ref.name)
+                    continue
+
+                field_ = reference.get_field(field_ref.name)
+                formulas.append(field_.formula)
+
+            field.formula = field.formula.format(*formulas)
 
 
 class FieldsResolver:
