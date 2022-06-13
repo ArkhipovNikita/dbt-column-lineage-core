@@ -22,6 +22,8 @@ class Field:
     depends_on: List[FieldRef]
     alias: Optional[str] = None
 
+    formula: Optional[str] = None
+
     @cached_property
     def name(self) -> str:
         if self.alias:
