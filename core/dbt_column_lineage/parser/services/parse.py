@@ -14,6 +14,7 @@ from dbt_column_lineage.parser.schemas.parsed import (
     Statement,
 )
 from dbt_column_lineage.parser.schemas.relation import ComponentName, Path
+from dbt_column_lineage.parser.schemas.token import TokenList
 from dbt_column_lineage.parser.services._formula import get_formula
 from dbt_column_lineage.parser.visitors import (
     ColumnRefVisitor,
@@ -25,6 +26,7 @@ from dbt_column_lineage.parser.visitors import (
 from pglast import _extract_comments, parse_sql
 from pglast.ast import A_Star as A_StarNode
 from pglast.ast import ColumnRef, CommonTableExpr, Node, ResTarget, SelectStmt
+from pglast.parser import Token, scan
 
 
 def get_field_ref(node: ColumnRef) -> FieldRef:
@@ -176,9 +178,49 @@ def remove_comments(sql: str) -> str:
     return "".join(parts)
 
 
+def get_ctes_end_idx(node: SelectStmt, tokens: TokenList) -> int:
+    def is_parenthesis(token: Token):
+        return token.name in ("ASCII_40", "ASCII_41")
+
+    ctes = CommonTableExprVisitor(flat=True)(node.withClause)
+
+    if not ctes:
+        return 0
+
+    last_cte = ctes[-1]
+    del ctes
+
+    tokens = tokens[last_cte.location :]
+    tokens = filter(is_parenthesis, tokens)
+
+    # first parenthesis is always opening
+    next(tokens)
+    balance = 1
+
+    for token in tokens:
+        # (
+        if token.name == "ASCII_40":
+            balance += 1
+        # )
+        elif token.name == "ASCII_41":
+            balance -= 1
+
+        if balance < 0:
+            raise Exception("Invalid parenthesis sequence.")
+
+        if balance == 0:
+            return token.start
+
+    raise Exception("Invalid parenthesis sequence.")
+
+
 def parse(sql: str) -> Tuple[Root, List[CTE]]:
     sql = remove_comments(sql)
     parsed_sql = parse_sql(sql)
+
+    tokens = scan(sql)
+    tokens = TokenList(tokens)
+
     stmt = parsed_sql[0].stmt
 
     select_stmts = SelectStmtVisitor(flat=True)(stmt)
@@ -187,13 +229,13 @@ def parse(sql: str) -> Tuple[Root, List[CTE]]:
         RootNotFoundException()
 
     select_stmt = select_stmts[0]
+    ctes_end_idx = get_ctes_end_idx(select_stmt, tokens)
 
     root = get_root(
         select_stmt,
         NodeSQL(
             sql=sql,
-            start_idx=1470,
-            # start_idx=select_stmt.location,
+            start_idx=ctes_end_idx + 1,
             end_idx=len(sql) - 1,
         ),
     )
@@ -203,9 +245,8 @@ def parse(sql: str) -> Tuple[Root, List[CTE]]:
         NodeSQL(
             sql=sql,
             start_idx=0,
-            end_idx=1470,
             # TODO: remove spaces ?
-            # end_idx=select_stmt.location,
+            end_idx=ctes_end_idx,
         ),
     )
 
