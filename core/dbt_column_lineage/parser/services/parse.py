@@ -22,7 +22,7 @@ from dbt_column_lineage.parser.visitors import (
     ResTargetVisitor,
     SelectStmtVisitor,
 )
-from pglast import parse_sql
+from pglast import _extract_comments, parse_sql
 from pglast.ast import A_Star as A_StarNode
 from pglast.ast import ColumnRef, CommonTableExpr, Node, ResTarget, SelectStmt
 
@@ -161,8 +161,23 @@ def get_root(node: SelectStmt, node_sql: NodeSQL) -> Root:
     )
 
 
+def remove_comments(sql: str) -> str:
+    parts = []
+    comments = _extract_comments(sql)
+    prev_end_idx = 0
+
+    for comment in comments:
+        start_idx = comment.location
+        parts.append(sql[prev_end_idx:start_idx])
+        prev_end_idx = start_idx + len(comment.text)
+
+    parts.append(sql[prev_end_idx:])
+
+    return "".join(parts)
+
+
 def parse(sql: str) -> Tuple[Root, List[CTE]]:
-    # TODO: clean comments
+    sql = remove_comments(sql)
     parsed_sql = parse_sql(sql)
     stmt = parsed_sql[0].stmt
 
