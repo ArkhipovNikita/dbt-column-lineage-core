@@ -54,4 +54,4 @@ def get_formula(node_sql: NodeSQL, column_refs: List[ColumnRef]) -> str:
 
     parts.append(node_sql.sql[prev_end_idx : formula_bounds[1] + 1])
 
-    return "%s".join(parts)
+    return "{}".join(parts)
