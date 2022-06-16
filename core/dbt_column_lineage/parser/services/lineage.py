@@ -7,7 +7,8 @@ from dbt_column_lineage.parser.schemas.relation import Relation
 
 def get_column_lineage(field: Field) -> ColumnLineage:
     stack = [field]
-    res = defaultdict(list)
+    formula = field.formula
+    lineage = defaultdict(list)
 
     while len(stack) != 0:
         field = stack.pop()
@@ -17,7 +18,7 @@ def get_column_lineage(field: Field) -> ColumnLineage:
 
             # finish
             if isinstance(reference, Relation):
-                res[field_ref.source.reference].append(field_ref.name)
+                lineage[field_ref.source.reference].append(field_ref.name)
                 continue
 
             # get field by name
@@ -29,6 +30,8 @@ def get_column_lineage(field: Field) -> ColumnLineage:
                 )
 
             stack.append(field_)
+
+    res = ColumnLineage(formula=formula, lineage=lineage)
 
     return res
 

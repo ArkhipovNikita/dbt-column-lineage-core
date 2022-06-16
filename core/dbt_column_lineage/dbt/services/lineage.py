@@ -42,11 +42,14 @@ def get_node_columns_lineage(
     for column, column_lineage in columns_lineage.items():
 
         temp = {}
-        for relation, columns in column_lineage.items():
+        for relation, columns in column_lineage.lineage.items():
             model = relation_model_map[relation]
             temp[model.unique_id] = columns
 
-        res[column] = temp
+        res[column] = {
+            "formula": column_lineage.formula,
+            "lineage": temp,
+        }
 
     return res
 
