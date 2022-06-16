@@ -13,7 +13,7 @@ def get_field_def(tokens: TokenList) -> TokenList:
         # common
         del tokens[-1]
 
-    if tokens[-1].name == "IDENT":
+    if len(tokens) > 2 and tokens[-1].name == "IDENT" and tokens[-2].name == "AS":
         # ident
         del tokens[-1]
         # as
@@ -36,8 +36,14 @@ def get_formula(node_sql: NodeSQL, column_refs: List[ColumnRef]) -> str:
         for j in range(i, len(formula_tokens)):
             token = formula_tokens[j]
             if token.start == start_idx:
+                # slide tokens to cover all parts of column ref
+                column_ref_token_count = 2 * len(column_ref.fields) - 1
+                j += column_ref_token_count - 1
+                token = formula_tokens[j]
+
                 end_idx = token.end
-                i = j
+                i = j + 1
+
                 break
 
         if not end_idx:
