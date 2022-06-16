@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 
 from dbt_column_lineage.parser.schemas.base import FieldSearchMixin
 from dbt_column_lineage.parser.schemas.relation import Path, Relation
+from dbt_column_lineage.parser.schemas.token import TokenList
 
 A_Star = "*"
 
@@ -12,13 +13,14 @@ A_Star = "*"
 class NodeSQL:
     # must be lowered
     sql: str
+    tokens: TokenList
     # global indexes
     start_idx: int
     end_idx: int
 
     @cached_property
-    def area(self) -> str:
-        return self.sql[self.start_idx : self.end_idx]
+    def tokens_area(self) -> TokenList:
+        return self.tokens.real_slice(self.start_idx, self.end_idx + 1)
 
 
 @dataclass

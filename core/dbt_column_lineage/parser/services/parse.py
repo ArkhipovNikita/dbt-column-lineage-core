@@ -1,4 +1,3 @@
-import re
 from operator import attrgetter
 from typing import List, Tuple
 
@@ -48,7 +47,7 @@ def get_field_ref(node: ColumnRef) -> FieldRef:
 def get_field(node: ResTarget, node_sql: NodeSQL) -> Field:
     column_refs = ColumnRefVisitor()(node)
     field_refs = list(map(get_field_ref, column_refs))
-    formula = get_formula(field_refs, column_refs, node_sql)
+    formula = get_formula(node_sql, column_refs)
 
     return Field(alias=node.name, depends_on=field_refs, formula=formula)
 
@@ -66,6 +65,7 @@ def get_fields(node: Node, node_sql: NodeSQL) -> List[Field]:
             target,
             NodeSQL(
                 sql=node_sql.sql,
+                tokens=node_sql.tokens,
                 start_idx=bounds[i],
                 end_idx=bounds[i + 1],
             ),
@@ -100,15 +100,14 @@ def get_statement(node: SelectStmt, node_sql: NodeSQL) -> Statement:
         fields_end_idx = node_sql.end_idx
     else:
         last_target_start_idx = node.targetList[-1].location
-        match = re.match(
-            r"(.+)\s+from",
-            node_sql.sql[last_target_start_idx:],
-            flags=re.IGNORECASE,
-        )
-        fields_end_idx = last_target_start_idx + match.end(1)
+        tokens = node_sql.tokens.real_slice(last_target_start_idx)
+
+        from_token = next(filter(lambda token: token.name == "FROM", tokens))
+        fields_end_idx = from_token.start - 1
 
     fields_node_sql = NodeSQL(
         sql=node_sql.sql,
+        tokens=node_sql.tokens,
         start_idx=fields_start_idx,
         end_idx=fields_end_idx,
     )
@@ -144,6 +143,7 @@ def get_ctes(node: SelectStmt, node_sql: NodeSQL) -> List[CTE]:
             cte_expr,
             NodeSQL(
                 sql=node_sql.sql,
+                tokens=node_sql.tokens,
                 start_idx=location_idxs[i],
                 end_idx=location_idxs[i + 1],
             ),
@@ -190,7 +190,7 @@ def get_ctes_end_idx(node: SelectStmt, tokens: TokenList) -> int:
     last_cte = ctes[-1]
     del ctes
 
-    tokens = tokens[last_cte.location :]
+    tokens = tokens.real_slice(last_cte.location)
     tokens = filter(is_parenthesis, tokens)
 
     # first parenthesis is always opening
@@ -235,6 +235,7 @@ def parse(sql: str) -> Tuple[Root, List[CTE]]:
         select_stmt,
         NodeSQL(
             sql=sql,
+            tokens=tokens,
             start_idx=ctes_end_idx + 1,
             end_idx=len(sql) - 1,
         ),
@@ -244,6 +245,7 @@ def parse(sql: str) -> Tuple[Root, List[CTE]]:
         stmt,
         NodeSQL(
             sql=sql,
+            tokens=tokens,
             start_idx=0,
             # TODO: remove spaces ?
             end_idx=ctes_end_idx,
