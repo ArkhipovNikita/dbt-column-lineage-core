@@ -24,16 +24,15 @@ def get_field_def(tokens: TokenList) -> TokenList:
 
 def get_formula(node_sql: NodeSQL, column_refs: List[ColumnRef]) -> str:
     formula_tokens = get_field_def(node_sql.tokens_area)
-    formula_bounds = (formula_tokens[0].start, formula_tokens[-1].end)
-    prev_end_idx = formula_bounds[0]
-    parts = []
-    i = 0
+    exclude = []
 
-    for column_ref in column_refs:
+    # fill in exclude list (bounds of column_ref)
+    for i, column_ref in enumerate(column_refs):
         start_idx = column_ref.location
         end_idx = None
 
-        for j in range(i, len(formula_tokens)):
+        # TODO: optimize search
+        for j in range(len(formula_tokens)):
             token = formula_tokens[j]
             if token.start == start_idx:
                 # slide tokens to cover all parts of column ref
@@ -42,16 +41,25 @@ def get_formula(node_sql: NodeSQL, column_refs: List[ColumnRef]) -> str:
                 token = formula_tokens[j]
 
                 end_idx = token.end
-                i = j + 1
 
                 break
 
         if not end_idx:
             raise Exception("Token that represents column ref wasn't found")
 
+        exclude.append((i, start_idx, end_idx))
+
+    exclude.sort(key=lambda e: e[1])
+    formula_bounds = (formula_tokens[0].start, formula_tokens[-1].end)
+    prev_end_idx = formula_bounds[0]
+    parts = []
+
+    # format original formula: replace column_refs with {pos}
+    for pos, start_idx, end_idx in exclude:
         parts.append(node_sql.sql[prev_end_idx:start_idx])
+        parts.append("{%s}" % (pos,))
         prev_end_idx = end_idx + 1
 
     parts.append(node_sql.sql[prev_end_idx : formula_bounds[1] + 1])
 
-    return "{}".join(parts)
+    return "".join(parts)
