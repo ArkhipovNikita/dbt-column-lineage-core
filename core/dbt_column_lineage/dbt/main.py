@@ -6,6 +6,7 @@ from dbt import flags
 from dbt.config.profile import DEFAULT_PROFILES_DIR, read_user_config
 from dbt.main import _add_selection_arguments
 from dbt.tracking import do_not_track
+from dbt_column_lineage.dbt.tasks.docs import DocsTask
 from dbt_column_lineage.dbt.tasks.parse import ParseColumnLineageTask
 
 
@@ -72,8 +73,9 @@ def parse_args(args, cls=argparse.ArgumentParser):
     base_subparser = _build_base_subparser()
 
     parse_sub = _build_parse_subparser(subs, base_subparser)
+    docs_sub = _build_docs_subparser(subs, base_subparser)
 
-    _add_common_arguments(parse_sub)
+    _add_common_arguments(parse_sub, docs_sub)
     _add_selection_arguments(parse_sub)
 
     if len(args) == 0:
@@ -128,6 +130,13 @@ def _build_base_subparser():
 def _build_parse_subparser(subparsers, base_subparser):
     parse_sub = subparsers.add_parser("parse", parents=[base_subparser])
     parse_sub.set_defaults(cls=ParseColumnLineageTask)
+
+    return parse_sub
+
+
+def _build_docs_subparser(subparsers, base_subparser):
+    parse_sub = subparsers.add_parser("docs", parents=[base_subparser])
+    parse_sub.set_defaults(cls=DocsTask)
 
     return parse_sub
 

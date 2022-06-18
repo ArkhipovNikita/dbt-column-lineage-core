@@ -10,6 +10,7 @@ pglast = "^3.10"
 networkx = "^2.8.2"
 dbt-postgres = "^1.1.0"
 argparse = "^1.4.0"
+graphviz = "^0.20"
 
 [tool.poetry.dev-dependencies]
 # linting
