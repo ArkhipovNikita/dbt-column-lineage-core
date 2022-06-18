@@ -1,14 +1,36 @@
-from typing import Dict, List, Union
+from dataclasses import dataclass, field
+from typing import List
 
 from dbt.clients.system import write_json
-
-# TODO: replace with dataclass
-# name of a model: list of colum names
-ColumnLineage = Dict[str, Union[str, Dict[str, List[str]]]]
-# name of a column: name of a model: list of colum names
-ColumnsLineage = Dict[str, ColumnLineage]
+from dbt_column_lineage.dbt.schemas.base import dbtIntegrationMixin
 
 
-class ModelsColumnsLineage(Dict[str, ColumnLineage]):
+@dataclass
+class Source(dbtIntegrationMixin):
+    name: str
+    columns: List[str]
+
+
+@dataclass
+class ColumnLineage(dbtIntegrationMixin):
+    name: str
+    formula: str = ""
+    sources: List[Source] = field(default_factory=list)
+
+
+ColumnsLineage = List[ColumnLineage]
+
+
+@dataclass
+class ModelColumnsLineage(dbtIntegrationMixin):
+    name: str
+    columns: ColumnsLineage
+
+
+@dataclass
+class ModelsColumnsLineage(dbtIntegrationMixin):
+    models: List[ModelColumnsLineage]
+
     def write(self, path: str):
-        write_json(path, self)
+        data = self.to_dict()
+        write_json(path, data)
