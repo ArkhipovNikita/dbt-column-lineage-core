@@ -5,7 +5,10 @@ from dbt.graph import ResourceTypeSelector
 from dbt.node_types import NodeType
 from dbt.task.compile import CompileRunner, CompileTask
 from dbt_column_lineage.dbt.schemas.graph import ParsedColumnLineageNode
-from dbt_column_lineage.dbt.schemas.lineage import ModelsColumnsLineage
+from dbt_column_lineage.dbt.schemas.lineage import (
+    ModelColumnsLineage,
+    ModelsColumnsLineage,
+)
 from dbt_column_lineage.dbt.services.lineage import get_node_columns_lineage
 from dbt_column_lineage.dbt.utils import get_colum_lineage_manifest_path
 
@@ -17,7 +20,9 @@ class ParseColumnLineageRunner(CompileRunner):
 
         columns_lineage = get_node_columns_lineage(self.adapter, manifest, node)
         data = node.to_dict(omit_none=True)
-        data["columns_lineage"] = columns_lineage
+        data["columns_lineage"] = [
+            column_lineage.to_dict(omit_none=True) for column_lineage in columns_lineage
+        ]
         node = ParsedColumnLineageNode.from_dict(data)
 
         return node
@@ -41,9 +46,14 @@ class ParseColumnLineageTask(CompileTask):
         result = super().run()
         nodes = map(attrgetter("node"), result.results)
 
-        models_columns_lineage = ModelsColumnsLineage(
-            {node.unique_id: node.columns_lineage for node in nodes}
-        )
+        models_columns_lineage = [
+            ModelColumnsLineage(
+                name=node.unique_id,
+                columns=node.columns_lineage,
+            )
+            for node in nodes
+        ]
+        models_columns_lineage = ModelsColumnsLineage(models=models_columns_lineage)
 
         path = get_colum_lineage_manifest_path(self.config)
         models_columns_lineage.write(path)
