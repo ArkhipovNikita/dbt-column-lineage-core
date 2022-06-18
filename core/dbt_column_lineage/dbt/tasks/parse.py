@@ -10,7 +10,7 @@ from dbt_column_lineage.dbt.schemas.lineage import (
     ModelsColumnsLineage,
 )
 from dbt_column_lineage.dbt.services.lineage import get_node_columns_lineage
-from dbt_column_lineage.dbt.utils import get_colum_lineage_manifest_path
+from dbt_column_lineage.dbt.tasks.lineage import LineageTask
 
 
 class ParseColumnLineageRunner(CompileRunner):
@@ -28,7 +28,7 @@ class ParseColumnLineageRunner(CompileRunner):
         return node
 
 
-class ParseColumnLineageTask(CompileTask):
+class ParseColumnLineageTask(CompileTask, LineageTask):
     def get_node_selector(self) -> ResourceTypeSelector:
         if self.manifest is None or self.graph is None:
             raise InternalException("manifest and graph must be set to get perform node selection")
@@ -54,8 +54,7 @@ class ParseColumnLineageTask(CompileTask):
             for node in nodes
         ]
         models_columns_lineage = ModelsColumnsLineage(models=models_columns_lineage)
-
-        path = get_colum_lineage_manifest_path(self.config)
-        models_columns_lineage.write(path)
+        self.lineage = models_columns_lineage
+        self.write_lineage()
 
         return models_columns_lineage
