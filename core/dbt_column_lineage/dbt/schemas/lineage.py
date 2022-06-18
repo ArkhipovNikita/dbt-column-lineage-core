@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 from dbt.clients.system import write_json
@@ -14,8 +14,8 @@ class Source(dbtIntegrationMixin):
 @dataclass
 class ColumnLineage(dbtIntegrationMixin):
     name: str
-    formula: str
-    sources: List[Source]
+    formula: str = ""
+    sources: List[Source] = field(default_factory=list)
 
 
 ColumnsLineage = List[ColumnLineage]

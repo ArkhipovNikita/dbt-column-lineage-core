@@ -1,6 +1,6 @@
 import re
 from operator import attrgetter
-from typing import List
+from typing import List, Tuple
 
 from dbt.adapters.base import BaseRelation as DBTRelation
 from dbt.adapters.sql import SQLAdapter
@@ -28,8 +28,11 @@ def get_node_columns_lineage(
     )
 
     if not depends_on_models:
-        # todo: get column names from db
-        # todo: add check that current node is model
+        dbt_relation = _get_dbt_relation_from_node(node)
+        column_names = get_dbt_relation_columns(adapter, dbt_relation)
+        dbt_columns_lineage.extend(
+            [ColumnLineage(name=column_name) for column_name in column_names]
+        )
         return dbt_columns_lineage
 
     initial_relations = []
@@ -64,19 +67,36 @@ def get_node_columns_lineage(
 
 
 def _get_relation_from_node(adapter: SQLAdapter, node: CompiledModelNode) -> Relation:
-    # TODO: cache got relations
-    vals = re.findall('[^".]+', node.relation_name)
-    dbt_path = _get_dbt_path_from_vals(vals)
-    dbt_relation = DBTRelation(path=dbt_path)
+    dbt_relation = _get_dbt_relation_from_node(node)
+    field_names = get_dbt_relation_columns(adapter, dbt_relation)
 
-    with adapter.connection_named("master"):
-        relation_columns = adapter.get_columns_in_relation(dbt_relation)
-
+    vals = _get_node_relation_name_vals(node)
     path = _get_path_from_vals(vals)
-    field_names = tuple(map(attrgetter("name"), relation_columns))
+
     relation = Relation(path=path, field_names=field_names)
 
     return relation
+
+
+def _get_node_relation_name_vals(node: CompiledModelNode) -> List[str]:
+    return re.findall('[^".]+', node.relation_name)
+
+
+def _get_dbt_relation_from_node(node: CompiledModelNode) -> DBTRelation:
+    vals = _get_node_relation_name_vals(node)
+    dbt_path = _get_dbt_path_from_vals(vals)
+    return DBTRelation(path=dbt_path)
+
+
+def get_dbt_relation_columns(adapter: SQLAdapter, dbt_relation: DBTRelation) -> Tuple[str, ...]:
+    # TODO: cache got relations
+
+    with adapter.connection_named("master"):
+        columns = adapter.get_columns_in_relation(dbt_relation)
+
+    column_names = tuple(map(attrgetter("name"), columns))
+
+    return column_names
 
 
 def _get_dbt_path_from_vals(vals: List[str]) -> DBTPath:
