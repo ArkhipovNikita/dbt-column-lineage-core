@@ -21,7 +21,7 @@ def main(args=None):
 
     user_config = read_user_config(flags.PROFILES_DIR)
     # origin files shouldn't be changed
-    # user_config.write_json = False
+    user_config.write_json = False
 
     # apply settings
     flags.set_from_args(parsed, user_config)
