@@ -1,10 +1,10 @@
 import re
 from operator import attrgetter
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from dbt.adapters.base import BaseRelation as DBTRelation
 from dbt.adapters.sql import SQLAdapter
-from dbt.contracts.graph.compiled import CompiledModelNode
+from dbt.contracts.graph.compiled import CompiledModelNode, CompiledSeedNode
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.relation import ComponentName
 from dbt.contracts.relation import Path as DBTPath
@@ -17,12 +17,12 @@ from dbt_column_lineage.parser.schemas.relation import Path, Relation
 def get_node_columns_lineage(
     adapter: SQLAdapter,
     manifest: Manifest,
-    node: CompiledModelNode,
+    node: Union[CompiledModelNode, CompiledSeedNode],
 ) -> ColumnsLineage:
     dbt_columns_lineage = []
     depends_on_models = list(
         filter(
-            lambda n: n.resource_type == NodeType.Model,
+            lambda n: n.resource_type in (NodeType.Model, NodeType.Seed),
             map(lambda n: manifest.nodes[n], node.depends_on_nodes),
         )
     )
@@ -66,7 +66,9 @@ def get_node_columns_lineage(
     return dbt_columns_lineage
 
 
-def _get_relation_from_node(adapter: SQLAdapter, node: CompiledModelNode) -> Relation:
+def _get_relation_from_node(
+    adapter: SQLAdapter, node: Union[CompiledModelNode, CompiledSeedNode]
+) -> Relation:
     dbt_relation = _get_dbt_relation_from_node(node)
     field_names = get_dbt_relation_columns(adapter, dbt_relation)
 
@@ -78,11 +80,14 @@ def _get_relation_from_node(adapter: SQLAdapter, node: CompiledModelNode) -> Rel
     return relation
 
 
-def _get_node_relation_name_vals(node: CompiledModelNode) -> List[str]:
-    return re.findall('[^".]+', node.relation_name)
+def _get_node_relation_name_vals(node: Union[CompiledModelNode, CompiledSeedNode]) -> List[str]:
+    if isinstance(node, CompiledModelNode):
+        return re.findall('[^".]+', node.relation_name)
+    else:
+        return list(filter(None, [node.database, node.schema, node.alias]))
 
 
-def _get_dbt_relation_from_node(node: CompiledModelNode) -> DBTRelation:
+def _get_dbt_relation_from_node(node: Union[CompiledModelNode, CompiledSeedNode]) -> DBTRelation:
     vals = _get_node_relation_name_vals(node)
     dbt_path = _get_dbt_path_from_vals(vals)
     return DBTRelation(path=dbt_path)

@@ -31,6 +31,12 @@ class FieldRef:
     # resolved
     source: Optional["Source"] = None
 
+    def __str__(self):
+        path = self.path
+        components = (path.database, path.schema, path.identifier, self.name)
+        components = filter(None, components)
+        return ".".join(components)
+
 
 @dataclass
 class Field:
