@@ -168,6 +168,8 @@ class FieldResolver:
                 formulas.append(field_.formula)
 
             field.formula = field.formula.format(*formulas)
+            if len(field.depends_on) == 1 and field.formula == str(field.depends_on[0]):
+                field.formula = ""
 
 
 class FieldsResolver:
