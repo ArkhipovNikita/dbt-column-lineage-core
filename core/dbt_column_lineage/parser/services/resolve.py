@@ -140,22 +140,8 @@ class FieldResolver:
         fields = filter(lambda f: not f.is_a_star, self.statement.fields)
 
         for field in fields:
-            formulas = []
-
             for field_ref in field.depends_on:
-                source = self.get_field_ref_source(field_ref)
-
-                field_ref.source = source
-                reference = source.reference
-
-                if isinstance(reference, Relation):
-                    formulas.append(field_ref.name)
-                    continue
-
-                field_ = reference.get_field(field_ref.name)
-                formulas.append(field_.formula)
-
-            field.formula = field.formula.format(*formulas)
+                field_ref.source = self.get_field_ref_source(field_ref)
 
     def get_field_ref_source(self, field_ref: FieldRef) -> Source:
         if not field_ref.path.is_empty:
