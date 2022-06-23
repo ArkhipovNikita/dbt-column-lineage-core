@@ -26,6 +26,7 @@ class SourcesResolver:
     ):
         self.statements = statements
 
+        # TODO: one map of cte and relations
         self.cte_map: Dict[str, CTE] = {
             statement.name: statement for statement in statements if isinstance(statement, CTE)
         }
